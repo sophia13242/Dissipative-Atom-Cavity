@@ -1,0 +1,76 @@
+# --------------------
+# Python
+# --------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.uv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Logs and debug files
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.swp
+
+# dotenv environment variables
+.env
+.env.*
+!.env.example
+
+# Coverage and testing
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# VS Code
+.vscode/
+.history/
+
+# --------------------
+# Windows-specific
+# --------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# --------------------
+# macOS junk (in case of cross-platform work)
+# --------------------
+.DS_Store
+.AppleDouble
+.LSOverride
