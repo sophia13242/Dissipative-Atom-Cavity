@@ -1,5 +1,7 @@
 import numpy as np
 import qutip as qt
+import imageio
+import os
 
 class AtomCavitySystem:
     def __init__(self, N, g, w0, gamma=0.1, kappa=0.05, beta=0.02):
@@ -93,3 +95,42 @@ class AtomCavitySystem:
         b = qt.Bloch()
         b.add_vectors(bloch_vector)
         b.show()
+
+
+    def create_bloch_gif(self, result, filename, duration=0.05):
+        # Compute Bloch vectors
+        bloch_vectors = []
+        for rho in result.states:
+            rho_atom = self.get_reduced_atom_state(rho)
+            vector = [
+                qt.expect(qt.sigmax(), rho_atom),
+                qt.expect(qt.sigmay(), rho_atom),
+                qt.expect(qt.sigmaz(), rho_atom)
+            ]
+            bloch_vectors.append(vector)
+
+        # Create a fresh Bloch sphere
+        b = qt.Bloch()
+        b.vector_color = ['r']
+        b.point_color = ['b']
+
+        # Save each frame
+        frames = []
+        for i, vec in enumerate(bloch_vectors):
+            b.clear()
+            b.add_vectors(vec)
+            frame_file = f"temp_frame_{i}.png"
+            b.save(frame_file)
+            frames.append(frame_file)
+
+        # Convert to GIF
+        images = [imageio.imread(f) for f in frames]
+        imageio.mimsave(filename, images, duration=duration)
+
+        # Clean up
+        for f in frames:
+            os.remove(f)
+
+        print(f"Animation saved as {filename}")
+
+
