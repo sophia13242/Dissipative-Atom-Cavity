@@ -69,3 +69,27 @@ class AtomCavitySystem:
             raise ValueError("Invalid atom state. Use 'g', 'e', '+', or '-'.")
 
         return qt.ket2dm(qt.tensor(cavity, atom))
+    
+    def get_reduced_atom_state(self, rho):
+        return rho.ptrace(1)
+    
+    #helper functions for visualization
+
+    def plot_bloch_vector(self, rho):
+        rho_atom = self.get_reduced_atom_state(rho)
+
+        # Expectation values of Pauli operators
+        sx = qt.sigmax()
+        sy = qt.sigmay()
+        sz = qt.sigmaz()
+
+        bloch_vector = [
+            qt.expect(sx, rho_atom),
+            qt.expect(sy, rho_atom),
+            qt.expect(sz, rho_atom)
+        ]
+
+        # Draw Bloch sphere
+        b = qt.Bloch()
+        b.add_vectors(bloch_vector)
+        b.show()
