@@ -97,7 +97,8 @@ class AtomCavitySystem:
         b.show()
 
 
-    def create_bloch_gif(self, result, filename, duration=0.05):
+    def create_bloch_gif(self, result, filename):
+
         # Compute Bloch vectors
         bloch_vectors = []
         for rho in result.states:
@@ -108,6 +109,14 @@ class AtomCavitySystem:
                 qt.expect(qt.sigmaz(), rho_atom)
             ]
             bloch_vectors.append(vector)
+
+        # Compute frame durations based on simulation times
+        times = np.array(result.times)
+        dts = np.diff(times)
+        dts = np.append(dts, dts[-1])  # pad last step so lengths match
+        dts = dts * 4
+
+        print("updated")
 
         # Create a fresh Bloch sphere
         b = qt.Bloch()
@@ -123,14 +132,15 @@ class AtomCavitySystem:
             b.save(frame_file)
             frames.append(frame_file)
 
-        # Convert to GIF
+        # Convert to GIF using variable durations per frame
         images = [imageio.imread(f) for f in frames]
-        imageio.mimsave(filename, images, duration=duration)
+        imageio.mimsave(filename, images, duration=dts.tolist())
 
-        # Clean up
+        # Clean up temporary files
         for f in frames:
             os.remove(f)
 
         print(f"Animation saved as {filename}")
+
 
 
