@@ -116,7 +116,6 @@ class AtomCavitySystem:
         dts = np.append(dts, dts[-1])  # pad last step so lengths match
         dts = dts * 4
 
-        print("updated")
 
         # Create a fresh Bloch sphere
         b = qt.Bloch()
