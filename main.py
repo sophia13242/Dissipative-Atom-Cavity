@@ -1,6 +1,6 @@
 import numpy as np
 import qutip as qt
-from src.system import AtomCavitySystem
+from src.system_single import AtomCavitySystem
 import matplotlib.pyplot as plt
 
 def main():
