@@ -4,6 +4,28 @@ import imageio
 import os
 
 class AtomCavitySystem:
+    """
+    A class representing a single two-level atom coupled to a quantized cavity mode.
+    The model includes coherent atom–cavity interaction, as well as dissipative processes
+    such as cavity photon leakage, atomic decay, and dephasing.
+    Visualization of atomic states on the Bloch sphere is also supported.
+
+    Parameters
+    ----------
+    N : int
+        Dimension of the cavity Hilbert space (photon number cutoff).
+    g : float
+        Atom–cavity coupling strength.
+    w0 : float
+        Resonant frequency of the atom and cavity (assumed identical).
+    gamma : float, optional
+        Cavity photon leakage rate. Default is 0.1.
+    kappa : float, optional
+        Spontaneous emission (atomic decay) rate. Default is 0.05.
+    beta : float, optional
+        Atomic pure dephasing rate. Default is 0.02.
+    """
+
     def __init__(self, N, g, w0, gamma=0.1, kappa=0.05, beta=0.02):
         self.N = N
         self.g = g
@@ -11,7 +33,7 @@ class AtomCavitySystem:
         self.gamma = gamma
         self.kappa = kappa
         self.beta = beta
-        
+
         # Define operators once
         self.a = qt.tensor(qt.destroy(N), qt.identity(2))
         self.sm = qt.tensor(qt.identity(N), qt.destroy(2))
@@ -24,6 +46,23 @@ class AtomCavitySystem:
         self.e_ops = []
 
     def create_collapse_operators(self, leaking=False, decay=False, dephasing=False):
+        """
+        Define collapse (dissipative) operators for the master equation.
+
+        Parameters
+        ----------
+        leaking : bool
+            If True, include cavity photon leakage at rate gamma.
+        decay : bool
+            If True, include atomic spontaneous emission at rate kappa.
+        dephasing : bool
+            If True, include atomic pure dephasing at rate beta.
+
+        Returns
+        -------
+        list of Qobj
+            Collapse operators to be passed to `mesolve`.
+        """
         self.c_ops = []
         if leaking:
             self.c_ops.append(np.sqrt(self.gamma) * self.a)
@@ -34,6 +73,25 @@ class AtomCavitySystem:
         return self.c_ops
 
     def create_expectation_values(self, number_atom=False, number_cavity=False, coherence_ge=False, coherence_eg=False):
+        """
+        Define expectation value operators to track during the simulation.
+
+        Parameters
+        ----------
+        number_atom : bool
+            If True, include ⟨σ†σ⟩ (atomic excitation probability).
+        number_cavity : bool
+            If True, include ⟨a†a⟩ (cavity photon number).
+        coherence_ge : bool
+            If True, include ⟨|g⟩⟨e|⟩ (atomic coherence).
+        coherence_eg : bool
+            If True, include ⟨|e⟩⟨g|⟩ (atomic coherence).
+
+        Returns
+        -------
+        list of Qobj
+            Operators to be used in `mesolve` as expectation operators.
+        """
         self.e_ops = []
         if number_atom:
             self.e_ops.append(self.sm.dag() * self.sm)
@@ -46,12 +104,41 @@ class AtomCavitySystem:
         return self.e_ops
 
     def create_hamiltonian(self):
+        """
+        Construct the system Hamiltonian under the Jaynes–Cummings model.
+
+        Returns
+        -------
+        Qobj
+            Hamiltonian: H = w0 * (a†a + σ†σ) + g * (a†σ + a σ†)
+        """
         H_cavity = self.w0 * self.a.dag() * self.a
         H_atom = self.w0 * self.sm.dag() * self.sm
         H_int = self.g * (self.a.dag() * self.sm + self.a * self.sm.dag())
         return H_cavity + H_atom + H_int
 
     def create_initial_state(self, state_cavity, state_atom):
+        """
+        Construct the initial density matrix of the system.
+
+        Parameters
+        ----------
+        state_cavity : str
+            Initial cavity Fock state. Options:
+            - '0' : vacuum state |0⟩
+            - '1' : single-photon state |1⟩
+        state_atom : str
+            Initial atomic state. Options:
+            - 'g' : ground state |g⟩
+            - 'e' : excited state |e⟩
+            - '+' : superposition (|g⟩ + |e⟩)/√2
+            - '-' : superposition (|g⟩ - |e⟩)/√2
+
+        Returns
+        -------
+        Qobj
+            Density matrix of the initial atom–cavity system.
+        """
         if state_cavity == '0':
             cavity = qt.basis(self.N, 0)
         elif state_cavity == '1':
@@ -71,13 +158,32 @@ class AtomCavitySystem:
             raise ValueError("Invalid atom state. Use 'g', 'e', '+', or '-'.")
 
         return qt.ket2dm(qt.tensor(cavity, atom))
-    
+
     def get_reduced_atom_state(self, rho):
+        """
+        Compute the reduced atomic density matrix by tracing out the cavity.
+
+        Parameters
+        ----------
+        rho : Qobj
+            Full system density matrix.
+
+        Returns
+        -------
+        Qobj
+            Reduced density matrix of the atom.
+        """
         return rho.ptrace(1)
-    
-    #helper functions for visualization
 
     def plot_bloch_vector(self, rho):
+        """
+        Plot the atomic state on the Bloch sphere.
+
+        Parameters
+        ----------
+        rho : Qobj
+            Full system density matrix (atom + cavity).
+        """
         rho_atom = self.get_reduced_atom_state(rho)
 
         # Expectation values of Pauli operators
@@ -96,9 +202,24 @@ class AtomCavitySystem:
         b.add_vectors(bloch_vector)
         b.show()
 
-
     def create_bloch_gif(self, result, filename):
+        """
+        Generate an animated GIF showing the evolution of the atomic state
+        on the Bloch sphere.
 
+        Parameters
+        ----------
+        result : Result
+            Output of `mesolve`, containing the time-evolved states.
+        filename : str
+            Output file name for the GIF.
+
+        Notes
+        -----
+        - Each frame is generated by plotting the Bloch vector at one time step.
+        - Frame durations are scaled by the actual simulation time steps.
+        - Temporary PNG files are created and deleted during the process.
+        """
         # Compute Bloch vectors
         bloch_vectors = []
         for rho in result.states:
@@ -115,7 +236,6 @@ class AtomCavitySystem:
         dts = np.diff(times)
         dts = np.append(dts, dts[-1])  # pad last step so lengths match
         dts = dts * 4
-
 
         # Create a fresh Bloch sphere
         b = qt.Bloch()
@@ -140,6 +260,3 @@ class AtomCavitySystem:
             os.remove(f)
 
         print(f"Animation saved as {filename}")
-
-
-
